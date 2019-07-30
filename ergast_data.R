@@ -74,11 +74,41 @@ last_laps <- df %>%
                    position = position[which(lap_number == last_lap)]) %>% 
   dplyr::ungroup()
 
+
 df %>% 
-  # dplyr::filter(driverId == "hamilton") %>% 
+  dplyr::filter(driverId == "hamilton") %>%
   ggplot2::ggplot()+
   ggplot2::geom_line(ggplot2::aes(x = lap_number, y = position, color=driverId), size=0.5) +
-  ggplot2::geom_point(data = . %>% filter(!is.na(stop)), ggplot2::aes(x = lap_number, y = position, color=driverId)) +
-  ggplot2::geom_point(data = last_laps, ggplot2::aes(x = last_lap, y = position, color=driverId), shape=10) +
+  # ggplot2::geom_point(data = . %>% filter(!is.na(stop)), ggplot2::aes(x = lap_number, y = position, color=driverId)) +
+  # ggplot2::geom_point(data = last_laps, ggplot2::aes(x = last_lap, y = position, color=driverId), shape=10) +
   ggplot2::scale_y_continuous(trans = "reverse")
- 
+
+plotly::ggplotly(p)
+
+dd <- lapply(unique(df$driverId), function(driver){
+  df_s <- df %>% 
+    dplyr::filter(driverId == driver) %>%
+    dplyr::arrange(lap_number)
+  
+  lap_number <- c()
+  position <- c()
+  for(i in 1:(nrow(df_s)-1)){
+    current_pos <- df_s$position[i]
+    next_pos <- df_s$position[i+1]
+    by <- 0.05
+    x <- seq(df_s$lap_number[i], df_s$lap_number[i+1], by=by)
+    x_ <- seq(-0.5, 0.5, by=by)
+    a <- 10
+    b <- current_pos - next_pos
+    y <- current_pos - b/(1+exp(-a*x_))
+    lap_number <- c(lap_number, x)
+    position <- c(position, y)
+  }
+  data.frame(driverId=driver, lap_number, position, stringsAsFactors = F)
+}) %>% dplyr::bind_rows()
+
+dd %>% 
+  # dplyr::filter(driverId == "hamilton") %>%
+  ggplot2::ggplot()+
+  ggplot2::geom_line(ggplot2::aes(x = lap_number, y = position, color=driverId), size=0.5)+
+  ggplot2::scale_y_continuous(trans = "reverse")
