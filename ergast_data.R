@@ -1,5 +1,24 @@
 
 library(dplyr)
+library(extrafont)
+extrafont::font_import(pattern = "Formula")
+
+# Driver Info -------------------------------------------------------------
+
+driverId <- c("albon", "bottas","gasly","giovinazzi","grosjean","hamilton",
+              "hulkenberg","kevin_magnussen","kubica","kvyat", "leclerc",
+              "max_verstappen","norris","perez","raikkonen","ricciardo",
+              "russell","sainz","stroll","vettel")
+driverName <- c("ALB","BOT","GAS","GIO","GRO","HAM",
+                "HUL","MAG","KUB","KVY","LEC",
+                "VER","NOR","PER","RAI","RIC",
+                "RUS","SAI","STR","VET")
+driverColor <- c("#469BFF","#00D2BE","#1E41FF","#9B0000","#F0D787","#00D2BE",
+                 "#FFF500","#F0D787","#FFFFFF","#469BFF","#DC0000",
+                 "#1E41FF","#FF8700","#F596C8","#9B0000","#FFF500",
+                 "#FFFFFF","#FF8700","#9B0000","#DC0000")
+
+driverInfo <- data.frame(driverId, driverName, driverColor)
 
 # Query Template ----------------------------------------------------------
 
@@ -72,7 +91,8 @@ last_laps <- df %>%
   dplyr::group_by(driverId) %>% 
   dplyr::summarise(last_lap = max(lap_number),
                    position = position[which(lap_number == last_lap)]) %>% 
-  dplyr::ungroup()
+  dplyr::ungroup() %>% 
+  merge(driverInfo, by="driverId")
 
 
 df %>% 
@@ -107,8 +127,43 @@ dd <- lapply(unique(df$driverId), function(driver){
   data.frame(driverId=driver, lap_number, position, stringsAsFactors = F)
 }) %>% dplyr::bind_rows()
 
+nlaps <- max(df$lap_number)
 dd %>% 
+  merge(driverInfo, by="driverId") %>% 
   # dplyr::filter(driverId == "hamilton") %>%
   ggplot2::ggplot()+
   ggplot2::geom_line(ggplot2::aes(x = lap_number, y = position, color=driverId), size=0.5)+
-  ggplot2::scale_y_continuous(trans = "reverse")
+  # ggplot2::geom_point(data = . %>% filter(lap_number %% 5 == 0),
+  #                     ggplot2::aes(x = lap_number, y = position, color=driverId), shape=16, size=2) +
+  # ggplot2::geom_text(data = . %>% filter(lap_number %% 5 == 0),
+  #                    ggplot2::aes(x = lap_number, y = position-0.3, label=driverName, color=driverId), size=2) +
+  # ggplot2::geom_point(data = last_laps %>% filter(last_lap < nlaps),
+  #                     ggplot2::aes(x = last_lap, y = position, color=driverId), shape=16, size=2) +
+  # ggplot2::geom_text(data = last_laps %>% filter(last_lap < nlaps),
+  #                    ggplot2::aes(x = last_lap, y = position-0.3, label=driverName, color=driverId), size=2) +
+  # ggplot2::geom_point(data = last_laps %>% filter(last_lap == nlaps),
+  #                     ggplot2::aes(x = last_lap, y = position, color=driverId), shape=16, size=2) +
+  # ggplot2::geom_text(data = last_laps %>% filter(last_lap  == nlaps),
+  #                    ggplot2::aes(x = last_lap, y = position-0.3, label=driverName, color=driverId), size=2) +
+  ggplot2::geom_point(data = df %>% filter(!is.na(stop)), 
+                      ggplot2::aes(x = lap_number, y = position, color=driverId), size=1) +
+  ggplot2::geom_text(data = df %>% filter(!is.na(stop)), 
+                     ggplot2::aes(x = lap_number, y = position-0.3, color=driverId, label=paste0("PIT",stop)), 
+                     family = "Formula1-Display-Regular", size=3) +
+  ggplot2::scale_y_continuous(trans = "reverse") +
+  ggplot2::scale_color_manual(values=driverColor)+
+  ggplot2::scale_x_continuous(breaks=c(seq(0,nlaps,by=5),nlaps))+
+  ggplot2::theme(legend.position = "none",
+                 panel.background = ggplot2::element_rect(fill = "#38383F"),
+                 plot.background = ggplot2::element_rect(fill = "#38383F"),
+                 text = ggplot2::element_text(family = "Formula1-Display-Regular", colour = "#dddddd"),
+                 plot.title = ggplot2::element_text(family = "Formula1-Display-Bold", hjust = 0.07, colour = "#dddddd"),
+                 axis.title.x = ggplot2::element_blank(),
+                 axis.text.x = ggplot2::element_text(family = "Formula1-Display-Regular", size=7, colour = "#dddddd"),
+                 axis.title.y = ggplot2::element_blank(),
+                 # axis.text.y = ggplot2::element_blank(),
+                 # axis.ticks.y = ggplot2::element_blank(),
+                 panel.grid.major.x = ggplot2::element_line(size = 0.25, linetype = 'solid', colour = "#dddddd"),
+                 panel.grid.major.y = ggplot2::element_blank(),
+                 panel.grid.minor = ggplot2::element_blank())+
+  ggplot2::ggtitle("German Grand Prix 2019 - F1 Race")
