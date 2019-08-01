@@ -1,7 +1,7 @@
 
 library(dplyr)
 library(extrafont)
-extrafont::font_import(pattern = "Formula")
+extrafont::font_import(prompt = F, pattern = "Formula")
 
 # Driver Info -------------------------------------------------------------
 
@@ -115,15 +115,22 @@ last_laps <- df_laptimes %>%
 
 # Penalties ---------------------------------------------------------------
 
-pos <- list(grosjean=7, kevin_magnussen=8, hamilton=9, kubica=10, russell=11, raikkonen=12, giovinazzi=13)
+post <- list(grosjean=7, kevin_magnussen=8, hamilton=9, kubica=10, russell=11, raikkonen=12, giovinazzi=13)
 finish_lap <- nlaps+4
 finish_pos <- df %>% 
   dplyr::filter(lap_number == nlaps) %>% 
   dplyr::mutate(lap_number = finish_lap)
-for(n in names(pos)){
-  finish_pos$position[finish_pos$driverId ==  n] <- unlist(pos[n])
+for(n in names(post)){
+  finish_pos$position[finish_pos$driverId ==  n] <- unlist(post[n])
 }
-df <- df %>% dplyr::bind_rows(finish_pos)
+df <- df %>% 
+  dplyr::bind_rows(finish_pos)
+
+pre <- list(albon = 16, russell=17, kubica=18, norris=19)
+for(n in names(pre)){
+  df$position[df$driverId ==  n & df$lap_number == 0] <- unlist(pre[n])
+}
+
 
 
 # Safety Car --------------------------------------------------------------
@@ -154,7 +161,63 @@ dd <- lapply(unique(df$driverId), function(driver){
 }) %>% dplyr::bind_rows()
 
 
-# VIZ TO SAVE -------------------------------------------------------------
+# TIME GRAPH -------------------------------------------------------------
+
+df %>% 
+  # merge(driverInfo, by="driverId") %>% 
+  dplyr::mutate(minutes = substr(time,1,1) %>% as.numeric(),
+                seconds = substr(time,3,4) %>% as.numeric(),
+                millisecs = substr(time,6,8) %>% as.numeric(),
+                time_num = (minutes*60000+seconds*1000+millisecs)/1000) %>% 
+  dplyr::group_by(driverId) %>% 
+  dplyr::mutate(t1=cumsum(time_num)) %>% 
+  dplyr::ungroup() %>% 
+  dplyr::group_by(lap_number) %>% 
+  dplyr::mutate(t2=t1-min(t1)) %>% 
+  dplyr::ungroup() %>% 
+  merge(driverInfo, by="driverId") %>%
+  ggplot2::ggplot()+
+  # Position Lines
+  ggplot2::geom_line(ggplot2::aes(x = lap_number, y = t2, color=driverId), size=0.5, na.rm=T)+
+  # Points and names every 10 laps
+  # ggplot2::geom_point(data = . %>% filter(lap_number %in% c(0,6,17,26,35,40,50,56)),
+  #                     ggplot2::aes(x = lap_number, y = t2, color=driverId), shape=16, size=2) +
+  ggplot2::geom_label(data = . %>% filter(lap_number %in% c(0,6,17,26,35,40,50,56)),
+                      ggplot2::aes(x = lap_number, y = 150+position*10, label=driverName, color=driverId), fill="#2e2e2e",
+                      size=3, label.padding = grid::unit(0.15, "lines"), family="Formula1 Display-Bold") +
+  # Points and names for drivers on the last lap
+  ggplot2::geom_label(data = last_laps %>% filter(last_lap  == nlaps),
+                      ggplot2::aes(x = last_lap, y = 150+position*10, label=driverName, color=driverId), fill="#2e2e2e",
+                      size=3, label.padding = grid::unit(0.15, "lines"), family="Formula1 Display-Bold") +
+  # Safety car rectangle and name
+  ggplot2::annotate(geom = "rect", xmin=sc_laps, xmax=sc_laps+1, ymin=150, ymax=151, fill="#FFDE00")+
+  ggplot2::annotate(geom = "rect", xmin=sc_laps, xmax=sc_laps+1, ymin=-Inf, ymax=Inf, fill="#FFDE00", alpha=0.08)+
+  ggplot2::annotate(geom="label", x=sc_text, y=150, label="SC", color="black", fill="#FFDE00", size=3, family = "Formula1 Display-Regular")+
+  # Color and continuous scales
+  ggplot2::scale_color_manual(values=driverColor)+
+  ggplot2::scale_fill_manual(values=driverColor)+
+  ggplot2::scale_x_continuous(breaks=c(seq(0,nlaps,by=5),nlaps), expand = c(0.05,0.05), name="Lap")+
+  ggplot2::scale_y_continuous(breaks=c(0,50,100,150), limits = c(325,-0), trans = "reverse", name = "Seconds behind leader") +
+  # Theme
+  ggplot2::theme(legend.position = "none",
+                 panel.background = ggplot2::element_rect(fill = "#38383F"),
+                 plot.background = ggplot2::element_rect(fill = "#38383F"),
+                 text = ggplot2::element_text(family = "Formula1 Display-Regular", colour = "#dddddd"),
+                 plot.title = ggplot2::element_text(family = "Formula1 Display-Bold", hjust = 0, colour = "#dddddd"),
+                 axis.title.x = ggplot2::element_blank(),
+                 axis.text.x = ggplot2::element_text(family = "Formula1 Display-Regular", size=10, colour = "#dddddd"),
+                 axis.title.y = ggplot2::element_text(hjust = 0.9),
+                 axis.text.y = ggplot2::element_text(family = "Formula1 Display-Regular", size=10, colour = "#dddddd"),
+                 # axis.ticks.y = ggplot2::element_blank(),
+                 panel.grid.major.x = ggplot2::element_blank(), #ggplot2::element_line(size = 0.25, linetype = 'solid', colour = "#dddddd"),
+                 panel.grid.major.y = ggplot2::element_blank(),
+                 panel.grid.minor = ggplot2::element_blank())+
+  ggplot2::ggtitle("German Grand Prix 2019 - F1 Race")+
+  ggplot2::ggsave(filename = paste0("test", Sys.time(), ".png"), device="png", dpi=400, width=16, height=8)
+
+
+
+  # POSITION GRAPH ----------------------------------------------------------
 
 dd %>% 
   merge(driverInfo, by="driverId") %>% 
@@ -166,28 +229,28 @@ dd %>%
                       ggplot2::aes(x = lap_number, y = position, color=driverId), shape=16, size=2) +
   ggplot2::geom_label(data = . %>% filter(lap_number %% 10 == 0),
                       ggplot2::aes(x = lap_number, y = position-0.3, label=driverName, fill=driverId), 
-                      size=3, label.padding = grid::unit(0.15, "lines"), family="Formula1-Display-Bold") +
+                      size=3, label.padding = grid::unit(0.15, "lines"), family="Formula1 Display-Bold") +
   # Points and names for drivers retiring before last lap
   ggplot2::geom_point(data = last_laps %>% filter(last_lap < nlaps),
                       ggplot2::aes(x = last_lap, y = position, color=driverId), shape=16, size=2) +
   ggplot2::geom_label(data = last_laps %>% filter(last_lap < nlaps),
                       ggplot2::aes(x = last_lap, y = position-0.3, label=driverName, fill=driverId),
-                      size=3, label.padding = grid::unit(0.15, "lines"), family="Formula1-Display-Bold") +
+                      size=3, label.padding = grid::unit(0.15, "lines"), family="Formula1Display-Bold") +
   # Points and names for drivers on the last lap
   ggplot2::geom_point(data = last_laps %>% filter(last_lap == nlaps),
                       ggplot2::aes(x = last_lap, y = position, color=driverId), shape=16, size=2) +
   ggplot2::geom_label(data = last_laps %>% filter(last_lap  == nlaps),
                       ggplot2::aes(x = last_lap, y = position-0.3, label=driverName, fill=driverId), 
-                      size=3, label.padding = grid::unit(0.15, "lines"), family="Formula1-Display-Bold") +
-  # Finishing points and names for drivers (afeter penalties)
+                      size=3, label.padding = grid::unit(0.15, "lines"), family="Formula1 Display-Bold") +
+  # Finishing points and names for drivers (after penalties)
   ggplot2::geom_vline(ggplot2::aes(xintercept=finish_lap), color='white', linetype="dashed")+
   ggplot2::annotate(geom = "label", x=finish_lap, y=20, label="FL", color="black", fill="white",
-                    size=4, label.padding = grid::unit(0.15, "lines"), family="Formula1-Display-Bold") +
+                    size=3, label.padding = grid::unit(0.15, "lines"), family="Formula1 Display-Bold") +
   ggplot2::geom_point(data = . %>% filter(lap_number == finish_lap),
                       ggplot2::aes(x = lap_number, y = position, color=driverId), shape=16, size=2) +
   ggplot2::geom_label(data = . %>% filter(lap_number  == finish_lap),
                       ggplot2::aes(x = lap_number, y = position-0.3, label=driverName, fill=driverId), 
-                      size=3, label.padding = grid::unit(0.15, "lines"), family="Formula1-Display-Bold") +
+                      size=3, label.padding = grid::unit(0.15, "lines"), family="Formula1 Display-Bold") +
   # Pit stops names
   ggplot2::geom_text(data = merge(df_laptimes, df_pitstops, by=c("driverId","lap_number"), all.y = T) %>%
                        merge(driverInfo, by="driverId"),
@@ -196,7 +259,7 @@ dd %>%
   # Safety car rectangle and name
   ggplot2::annotate(geom = "rect", xmin=sc_laps, xmax=sc_laps+1, ymin=20, ymax=20.1, fill="#FFDE00")+
   ggplot2::annotate(geom = "rect", xmin=sc_laps, xmax=sc_laps+1, ymin=-Inf, ymax=Inf, fill="#FFDE00", alpha=0.08)+
-  ggplot2::annotate(geom="label", x=sc_text, y=20.05, label="SC", color="black", fill="#FFDE00", size=3, family = "Formula1-Display-Regular")+
+  ggplot2::annotate(geom="label", x=sc_text, y=20.05, label="SC", color="black", fill="#FFDE00", size=3, family = "Formula1 Display-Regular")+
   # Color and continuous scales
   ggplot2::scale_color_manual(values=driverColor)+
   ggplot2::scale_fill_manual(values=driverColor)+
@@ -206,12 +269,12 @@ dd %>%
   ggplot2::theme(legend.position = "none",
                  panel.background = ggplot2::element_rect(fill = "#38383F"),
                  plot.background = ggplot2::element_rect(fill = "#38383F"),
-                 text = ggplot2::element_text(family = "Formula1-Display-Regular", colour = "#dddddd"),
-                 plot.title = ggplot2::element_text(family = "Formula1-Display-Bold", hjust = 0, colour = "#dddddd"),
+                 text = ggplot2::element_text(family = "Formula1 Display-Regular", colour = "#dddddd"),
+                 plot.title = ggplot2::element_text(family = "Formula1 Display-Bold", hjust = 0, colour = "#dddddd"),
                  axis.title.x = ggplot2::element_blank(),
-                 axis.text.x = ggplot2::element_text(family = "Formula1-Display-Regular", size=10, colour = "#dddddd"),
+                 axis.text.x = ggplot2::element_text(family = "Formula1 Display-Regular", size=10, colour = "#dddddd"),
                  axis.title.y = ggplot2::element_blank(),
-                 axis.text.y = ggplot2::element_text(family = "Formula1-Display-Regular", size=10, colour = "#dddddd"),
+                 axis.text.y = ggplot2::element_text(family = "Formula1 Display-Regular", size=10, colour = "#dddddd"),
                  # axis.ticks.y = ggplot2::element_blank(),
                  panel.grid.major.x = ggplot2::element_blank(), #ggplot2::element_line(size = 0.25, linetype = 'solid', colour = "#dddddd"),
                  panel.grid.major.y = ggplot2::element_blank(),
