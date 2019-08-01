@@ -29,7 +29,7 @@ query_base <- paste0("http://ergast.com/api/", series, '/', season, '/', round, 
 
 # Qualifying --------------------------------------------------------------
 
-qualifying_file <- "qualifying_data.rds"
+qualifying_file <- "data/qualifying_data.rds"
 if(file.exists(qualifying_file)){
   df_qualifying <- readRDS(qualifying_file)
 }else{
@@ -47,7 +47,7 @@ if(file.exists(qualifying_file)){
 }
 # Lap Times ---------------------------------------------------------------
 
-laptimes_file <- "laptimes_data.rds"
+laptimes_file <- "data/laptimes_data.rds"
 if(file.exists(laptimes_file)){
   df_laptimes <- readRDS(laptimes_file)
 }else{
@@ -78,7 +78,7 @@ if(file.exists(laptimes_file)){
 
 # Pit Stops ----------------------------------------------------------------
 
-pitstops_file <- "pitstops_data.rds"
+pitstops_file <- "data/pitstops_data.rds"
 if(file.exists(pitstops_file)){
   df_pitstops <- readRDS(pitstops_file)
 }else{
