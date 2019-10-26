@@ -1,6 +1,6 @@
 library(dplyr)
 library(extrafont)
-extrafont::font_import(prompt = F, pattern = "Formula")
+#extrafont::font_import(prompt = F, pattern = "Formula")
 
 # Driver Info -------------------------------------------------------------
 
@@ -55,19 +55,28 @@ standings <- standings %>%
                 last_points = lag(points,1),
                 race_points = current_points-last_points,
                 race_points = ifelse(is.na(race_points), current_points, race_points),
+                fast_lap = race_points %in% c(26,19,16,13,11,9,7,5,3),
+                race_points = ifelse(fast_lap, race_points-1, race_points)
                 )
 
-position <- c(1,2,3,4,5,6,7,8,9,10)
+fast_lap_current <- 1
+fast_lap_new <- 0
+race_position <- c(1,2,3,4,5,6,7,8,9,10)
 points_current <- c(25,18,15,12,10,8,6,4,2,1)
-points_current_fastlap <- c(25,18,15,12,10,8,6,4,2,1)+1
 points_new <- c(10,9,8,7,6,5,4,3,2,1)
-point_system <- data.frame(position, points_current, points_current_fastlap, points_new)
-
+point_system <- data.frame(race_position, points_current, points_new)
 standings %>% 
-  merge(point_system, by='position') %>% 
-  dplyr::mutate(point_diff = race_points - points_current,
-                fast_lap = point_diff == 1) %>% View
+  merge(point_system, all.x=T, by.x='race_points', by.y='points_current', sort=F) %>% 
+  dplyr::group_by(Driver.code) %>% 
+  dplyr::arrange(round) %>%
+  dplyr::mutate( points_current = ifelse(fast_lap, points_current+fast_lap_current, points_current),
+                 points_current = cumsum(race_points),
+                 # points_new = ifelse(fast_lap, points_new+fast_lap_new, points_new),
+                 points_new = cumsum(ifelse(is.na(points_new), 0, points_new)) + points_new*0) %>% View
+  dplyr::ungroup() %>% 
   ggplot2::ggplot()+
-  ggplot2::geom_line(ggplot2::aes(x=round, y=race_points, color=Driver.code))
+  # ggplot2::geom_line(ggplot2::aes(x=round, y=points_current, color=Driver.driverId))+
+  ggplot2::geom_line(ggplot2::aes(x=round, y=points_new, color=Driver.driverId))
+
 
 
