@@ -7,5 +7,8 @@ Data from extracted using [Ergast API](http://ergast.com/mrd/).
 
 ### Example
 
+<img src="demo.png"/>
 <img src="figures/plot_positions.png"/>
 <img src="figures/plot_seconds_behind.png"/>
+
+
