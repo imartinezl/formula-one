@@ -98,8 +98,10 @@ data_to_plot %>%
   ggplot2::ggplot()+
   ggplot2::geom_line(ggplot2::aes(x=round, y=value, color=Driver.driverId))+
   ggplot2::geom_point(ggplot2::aes(x=round, y=value, color=Driver.driverId))+
-  ggplot2::geom_text(ggplot2::aes(x=round, y=value, color=Driver.driverId, label=driverName))+
+  ggplot2::geom_text(data = . %>% filter(round %% 3 == 0), 
+                     ggplot2::aes(x=round, y=value*1.1, color=Driver.driverId, label=driverName))+
   ggplot2::facet_grid(rows=vars(key), scales="free")+
   ggplot2::scale_color_manual(values=driverColor)+
   ggplot2::scale_x_continuous(breaks=1:nrow(circuits), labels=circuits$Location.country)
+  
 
