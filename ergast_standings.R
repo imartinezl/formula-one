@@ -161,7 +161,7 @@ constructorStandings_stats %>%
                 wins_x=(wins_xmin+wins_xmax)/2,
                 wins_ymin=top-2*w-sep, wins_ymax=top-w-sep, 
                 wins_angle = (wins_x*330),
-                wins_angle = ifelse(wins_angle>90, wins_angle-180, wins_angle),
+                wins_angle = ifelse(wins_angle>90, wins_angle-185, wins_angle),
                 
   ) %>% 
   dplyr::arrange(total_poles) %>%
@@ -173,7 +173,7 @@ constructorStandings_stats %>%
                 poles_x=(poles_xmin+poles_xmax)/2,
                 poles_ymin=top-3*w-2*sep, poles_ymax=top-2*w-2*sep,
                 poles_angle = (poles_x*330),
-                poles_angle = ifelse(poles_angle>90, poles_angle-180, poles_angle),
+                poles_angle = ifelse(poles_angle>90, poles_angle-185, poles_angle),
   ) %>% 
   dplyr::filter(total_points > 10) %>%
   ggplot2::ggplot()+
@@ -188,23 +188,23 @@ constructorStandings_stats %>%
                                   ymin=poles_ymin, ymax=poles_ymax,
                                   fill=Constructor.constructorId))+
   ggplot2::geom_text(data=. %>% filter(points_rel*100>2.5),
-                     family=font_family_bold, size=4, hjust=0.5,
+                     family=font_family_bold, size=5, hjust=0.5,
                      ggplot2::aes(x=points_x, y=top-w/2, label=points_per, angle=-points_angle,
                                   color=Constructor.constructorId=="williams"))+
   ggplot2::geom_text(data=. %>% filter(wins_rel*100>1),
-                     family=font_family_bold, color=font_color, size=4, hjust=0.5,
+                     family=font_family_bold, color=font_color, size=5, hjust=0.5,
                      ggplot2::aes(x=wins_x, y=top-3*w/2-sep, label=wins_per, angle=-wins_angle))+
   ggplot2::geom_text(data=. %>% filter(poles_rel*100>1),
-                     family=font_family_bold, color=font_color, size=4, hjust=0.5,
+                     family=font_family_bold, color=font_color, size=5, hjust=0.5,
                      ggplot2::aes(x=poles_x, y=top-5*w/2-2*sep, label=poles_per, angle=-poles_angle))+
   # ggplot2::geom_text(data=. %>% filter(total_points>10),
   #                    hjust=0, family=font_family, size=2,
   #                    ggplot2::aes(x=x, y=11, label=Constructor.name, angle=180-angle))+
-  ggplot2::geom_text(label="Points ", x=-1/9, y=top-w/2, hjust=1, angle=35, 
+  ggplot2::geom_text(label="Points ", x=-1/9, y=top-w/2, hjust=1, angle=35, size=6,
                      family=font_family, color=font_color, check_overlap = T)+
-  ggplot2::geom_text(label="Wins ", x=-1/9, y=top-3*w/2-sep, hjust=1, angle=35, 
+  ggplot2::geom_text(label="Wins ", x=-1/9, y=top-3*w/2-sep, hjust=1, angle=35, size=6, 
                      family=font_family, color=font_color, check_overlap = T)+
-  ggplot2::geom_text(label="Poles ", x=-1/9, y=top-5*w/2-2*sep, hjust=1, angle=35, 
+  ggplot2::geom_text(label="Poles ", x=-1/9, y=top-5*w/2-2*sep, hjust=1, angle=35, size=6,
                      family=font_family, color=font_color, check_overlap = T)+
   # ggplot2::geom_text(label=" Points", x=0, y=top-w/2, hjust=0, angle=0, 
   #                    family=font_family, color=font_color, check_overlap = T)+
@@ -212,7 +212,7 @@ constructorStandings_stats %>%
   #                    family=font_family, color=font_color, check_overlap = T)+
   # ggplot2::geom_text(label=" Poles", x=0, y=top-5*w/2-2*sep, hjust=0, angle=0, 
   #                    family=font_family, color=font_color, check_overlap = T)+
-  ggplot2::geom_text(label="F1\nHybrid Era\n2014-2019", x=0, y=0, hjust=0.5, angle=0, size=7,
+  ggplot2::geom_text(label="F1\nHybrid Era\n2014-2019", x=0, y=0, hjust=0.5, angle=0, size=10,
                      family=font_family_bold, color=font_color, check_overlap = T)+
   ggplot2::coord_polar(theta = "x", start = pi, direction = 1, clip = "off")+
   ggplot2::scale_fill_manual(name="",
@@ -226,11 +226,13 @@ constructorStandings_stats %>%
     text = ggplot2::element_text(family=font_family, color=font_color),
     plot.background = ggplot2::element_rect(fill=background_color),
     legend.title = ggplot2::element_blank(),
+    legend.text = ggplot2::element_text(size=14),
     legend.key = ggplot2::element_rect(fill = background_color, color=background_color),
-    legend.key.height = ggplot2::unit(1, "lines"),
-    legend.key.width = ggplot2::unit(0.5, "lines"),
+    legend.key.height = ggplot2::unit(1.5, "lines"),
+    legend.key.width = ggplot2::unit(0.7, "lines"),
     legend.spacing.x = ggplot2::unit(0.5, "cm"),
-    legend.spacing.y = ggplot2::unit(0, "cm")
+    legend.spacing.y = ggplot2::unit(0, "cm"),
+    legend.position = "right"
   )+
-  ggplot2::ggsave(filename="demo.png",device="png", dpi=100, width=10, height=10)
-
+  ggplot2::ggsave(filename="demo.png",device="png", dpi=100, width=12, height=10)
+ 
