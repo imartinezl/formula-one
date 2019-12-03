@@ -17,7 +17,7 @@ constructorColor <- c(
   "williams"= "#FFFFFF",
   "force_india"="#F596C8",
   "lotus_f1"="#BA9D5C",
-  "sauber"="#011E65",
+  "sauber"="#536CC3",##536CC3 / #011E65
   "caterham"="#04650d",
   "manor"="#B52A00",
   "marussia"="#B11007"
@@ -55,39 +55,44 @@ results <- lapply(seasons, function(season){
 }) %>% dplyr::bind_rows()
 
 
-compute_blocks <- function(results, team_name, xref=0){
+compute_blocks <- function(results, teams_id, xref=0, x_max=10, y_incr=15){
   team <- results %>% 
-    dplyr::filter(Constructor.constructorId == team_name) %>% 
+    dplyr::filter(Constructor.constructorId == teams_id) %>% 
     dplyr::select(position, positionText, points, status, Time.millis,
                   Driver.driverId, Constructor.constructorId, season, round) %>% 
     dplyr::arrange(as.numeric(season), as.numeric(round)) %>% 
     dplyr::mutate(id = 1:n(),
-                  win = position == "1",
-                  podium = position == "2" | position == "3",
-                  top6 = position == "4" | position == "5" | position == "6",
-                  top10 = position == "7" | position == "8" | position == "9" | position == "10",
-                  retired = is.na(Time.millis) & status != "Finished", #is.na(as.numeric(positionText)) is.na(Time.millis) & 
-                  outpoints = points == "0" #& !retired
+                  win = position == "1" & points != "0",
+                  podium = (position == "2" | position == "3") & points != "0",
+                  top6 = (position == "4" | position == "5" | position == "6") & points != "0",
+                  top10 = (position == "7" | position == "8" | position == "9" | position == "10") & points != "0",
+                  dnf = !(status %in% c("Finished","+1 Lap")) & points == "0",# & is.na(as.numeric(positionText)) 
+                  outpoints = status %in% c("Finished","+1 Lap") & points == "0",
+                  rare = !(win | podium | top6 | top10 | dnf | outpoints),
+                  top10 = ifelse(rare & points != "0", T, top10),
     ) %>% 
     dplyr::group_by(season, round) %>% 
-    dplyr::mutate(retiredBoth = all(retired),
+    dplyr::mutate(dnfBoth = all(dnf),
                   temp_win = paste0(position, collapse = ""),
                   win12 = temp_win == "12" | temp_win == "21") %>% 
     dplyr::select(-temp_win) %>% 
     dplyr::ungroup()
   
+  # team[!(team$win | team$podium | team$top6 | team$top10 | team$outpoints | team$dnf),] %>% View
+  
   x <- c()
   y <- c()
   s <- c()
-  x_win <- xref; y_win <- 0
-  x_podium <- xref; y_podium <- 10
-  x_top6 <- xref; y_top6 <- 20
-  x_top10 <- xref; y_top10 <- 30
-  x_retired <- xref; y_retired <- 40
-  x_outpoints <- xref; y_outpoints <- 50
-  h <- 1
+  # y_incr <- 15
+  x_dnf <- xref; y_dnf <- 0
+  x_outpoints <- xref; y_outpoints <- y_dnf + y_incr
+  x_top10 <- xref; y_top10 <- y_outpoints + y_incr
+  x_top6 <- xref; y_top6 <- y_top10 + y_incr
+  x_podium <- xref; y_podium <- y_top6 + y_incr
+  x_win <- xref; y_win <- y_podium + y_incr
+  h <- -1
   w <- 1
-  x_max <- xref + 10
+  x_max <- xref + x_max
   for (i in 1:nrow(team)) {
     # print(i)
     if(team$win[i]){
@@ -130,14 +135,14 @@ compute_blocks <- function(results, team_name, xref=0){
         x_top10 <- xref
       }
     }
-    if(team$retired[i]){
-      x <- c(x, x_retired)
-      y <- c(y, y_retired)
-      s <- c(s, team$retiredBoth[i])
-      x_retired <- x_retired + w
-      if(x_retired >= x_max){
-        y_retired <- y_retired + h
-        x_retired <- xref
+    if(team$dnf[i]){
+      x <- c(x, x_dnf)
+      y <- c(y, y_dnf)
+      s <- c(s, team$dnfBoth[i])
+      x_dnf <- x_dnf + w
+      if(x_dnf >= x_max){
+        y_dnf <- y_dnf + h
+        x_dnf <- xref
       }
     }
     if(team$outpoints[i]){
@@ -155,23 +160,62 @@ compute_blocks <- function(results, team_name, xref=0){
   return(team %>% cbind(data.frame(x,y,s)))
 }
 
-teams_names <- c("mercedes", "ferrari", "red_bull", "williams")
+
+y_incr <- 15
+x_max <- 10
+# categories info
+category_label <- c( "DNF", "Out of points", "Top 10", "Top 6", "Podiums (2nd and 3rd)","Wins")
+category_y <- seq(0, (length(category_text)-1)*y_incr, by=y_incr)
+categories <- data.frame(category_label, category_y)
+
+# teams info
+teams_id <- c("mercedes", "ferrari", "red_bull", "williams", "force_india", 
+              "racing_point", "mclaren", "toro_rosso", "renault", "lotus_f1", "haas", 
+              "alfa", "sauber", "caterham", "manor", "marussia")
+teams_names <- sapply(teams_id, function(name){ results$Constructor.name[results$Constructor.constructorId == name][1]})
 n <- length(teams_names)
-by <- 12
-teams_xref <- seq(0,n*by,by=by)
+x_sep <- 14
+teams_xref <- seq(0,(n-1)*x_sep,by=x_sep)
+teams_xmid <- teams_xref + x_max/2
+teams_df <- data.frame(teams_id, teams_names, teams_xref, teams_xmid, row.names = NULL)
 
 a <- lapply(1:n, function(i){
-  compute_blocks(results, teams_names[i], teams_xref[i])
+  print(i)
+  compute_blocks(results, teams_id[i], teams_xref[i], x_max, y_incr)
 }) %>% dplyr::bind_rows()
 
-team_name <- "mercedes"
-team <- compute_blocks(results, team_name, 10)
+# team_name <- "alfa"
+# team <- compute_blocks(results, team_name, 10)
 
+font_family <- "Formula1-Display-Regular"
+font_family_bold <- "Formula1-Display-Bold"
+font_color <- "#FFFFFF"
+background_color <- "#222222"
 a %>% 
   ggplot2::ggplot()+
   ggplot2::geom_tile(ggplot2::aes(x=x, y=y, color=s, fill=Constructor.constructorId),
-                     width=0.5, height=0.5, size=0.25)+
-  ggplot2::coord_fixed(ratio=1) + #, xlim=c(-10,20))+
-  ggplot2::scale_fill_manual(values=constructorColor)+
-  ggplot2::scale_color_manual(values=c("black", "red"))#constructorColor)
+                     width=0.5, height=0.5, size=0)+
+  ggplot2::geom_text(data=teams_df, ggplot2::aes(x=teams_xmid, y=max(category_y), label=teams_names), 
+                     size=2, hjust=0.5, vjust=0,
+                     family=font_family, color=font_color, check_overlap = T)+
+  ggplot2::geom_text(data=categories, ggplot2::aes(x=0, y=category_y, label=category_label),
+                     size=2, hjust=1, vjust=0,
+                     family=font_family, color=font_color, check_overlap = T)+
+  ggplot2::coord_fixed(ratio=1, xlim=c(-15,200), ylim=c(-30, 100) )+
+  ggplot2::scale_fill_manual(guide=F, values=constructorColor)+
+  ggplot2::scale_color_manual(guide=F, values=c("black", "red"))+#constructorColor)
+  ggplot2::theme_void()+
+  ggplot2::theme(
+    text = ggplot2::element_text(family=font_family, color=font_color),
+    plot.background = ggplot2::element_rect(fill=background_color),
+    panel.background = ggplot2::element_rect(fill=background_color)
+    # legend.title = ggplot2::element_blank(),
+    # legend.text = ggplot2::element_text(size=14),
+    # legend.key = ggplot2::element_rect(fill = background_color, color=background_color),
+    # legend.key.height = ggplot2::unit(1.5, "lines"),
+    # legend.key.width = ggplot2::unit(0.7, "lines"),
+    # legend.spacing.x = ggplot2::unit(0.5, "cm"),
+    # legend.spacing.y = ggplot2::unit(0, "cm"),
+    # legend.position = "right"
+  )
 
