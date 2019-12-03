@@ -58,15 +58,16 @@ results <- lapply(seasons, function(season){
 compute_blocks <- function(results, team_name, xref=0){
   team <- results %>% 
     dplyr::filter(Constructor.constructorId == team_name) %>% 
-    dplyr::select(position, positionText, points, Driver.driverId, 
-                  Constructor.constructorId, season, round) %>% 
+    dplyr::select(position, positionText, points, status, Time.millis,
+                  Driver.driverId, Constructor.constructorId, season, round) %>% 
+    dplyr::arrange(as.numeric(season), as.numeric(round)) %>% 
     dplyr::mutate(id = 1:n(),
                   win = position == "1",
                   podium = position == "2" | position == "3",
                   top6 = position == "4" | position == "5" | position == "6",
                   top10 = position == "7" | position == "8" | position == "9" | position == "10",
-                  retired = is.na(as.numeric(positionText)),
-                  outpoints = points == "0" & !retired
+                  retired = is.na(Time.millis) & status != "Finished", #is.na(as.numeric(positionText)) is.na(Time.millis) & 
+                  outpoints = points == "0" #& !retired
     ) %>% 
     dplyr::group_by(season, round) %>% 
     dplyr::mutate(retiredBoth = all(retired),
@@ -154,15 +155,23 @@ compute_blocks <- function(results, team_name, xref=0){
   return(team %>% cbind(data.frame(x,y,s)))
 }
 
-teams_names <- c("mercedes", "ferrari", "red_bull", "williams", )
+teams_names <- c("mercedes", "ferrari", "red_bull", "williams")
+n <- length(teams_names)
+by <- 12
+teams_xref <- seq(0,n*by,by=by)
+
+a <- lapply(1:n, function(i){
+  compute_blocks(results, teams_names[i], teams_xref[i])
+}) %>% dplyr::bind_rows()
+
 team_name <- "mercedes"
 team <- compute_blocks(results, team_name, 10)
 
-team %>% 
+a %>% 
   ggplot2::ggplot()+
   ggplot2::geom_tile(ggplot2::aes(x=x, y=y, color=s, fill=Constructor.constructorId),
-                     width=0.5, height=0.5, size=0.5)+
-  ggplot2::coord_fixed(ratio=1, xlim=c(-10,20))+
-  ggplot2::scale_fill_manual(values="#00D2BE")+
-  ggplot2::scale_color_manual(values=c("#00D2BE", "red"))#constructorColor)
+                     width=0.5, height=0.5, size=0.25)+
+  ggplot2::coord_fixed(ratio=1) + #, xlim=c(-10,20))+
+  ggplot2::scale_fill_manual(values=constructorColor)+
+  ggplot2::scale_color_manual(values=c("black", "red"))#constructorColor)
 
