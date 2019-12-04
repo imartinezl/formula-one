@@ -164,9 +164,13 @@ compute_blocks <- function(results, teams_id, xref=0, x_max=10, y_incr=15, w=1, 
 y_incr <- 12
 x_max <- 10
 # categories info
-category_label <- c( "DNF", "Out of points", "Top 10", "Top 6", "Podiums (2nd and 3rd)","Wins")
-category_y <- seq(0, (length(category_label)-1)*y_incr, by=y_incr)
-categories <- data.frame(category_label, category_y)
+category_label <- c( "DNF", "Out of points", "Top 10", "Top 6", "Podiums","Wins")
+category_ref <- seq(0, (length(category_label)-1)*y_incr, by=y_incr) + 0.5
+category_mid <- category_ref - y_incr/2 + 1
+category_x <- c(-3, -3, -3, -4.5, -6, -7.5)
+category_y <- c(category_ref[1], category_ref[2], category_ref[6], category_ref[6], category_ref[6], category_ref[6])
+category_yend <- category_ref-y_incr+2
+categories <- data.frame(category_label, category_ref, category_mid, category_x, category_y, category_yend)
 
 # teams info
 teams_id <- c("mercedes", "ferrari", "red_bull", "williams", "force_india", 
@@ -176,7 +180,7 @@ teams_names <- sapply(teams_id, function(name){ results$Constructor.name[results
 n <- length(teams_names)
 x_sep <- 11
 teams_xref <- seq(0,(n-1)*x_sep,by=x_sep)
-teams_xmid <- teams_xref + x_max/2 - 0.5
+teams_xmid <- teams_xref + x_max/2
 teams_df <- data.frame(teams_id, teams_names, teams_xref, teams_xmid, row.names = NULL)
 
 a <- lapply(1:n, function(i){
@@ -187,48 +191,41 @@ a <- lapply(1:n, function(i){
 # team_name <- "alfa"
 # team <- compute_blocks(results, team_name, 10)
 
-font_family <- "Formula1 Display-Regular"
-font_family_bold <- "Formula1 Display-Bold"
+top <- max(category_ref)
+bottom <- -y_incr
+font_family <- "Formula1-Display-Regular"
+font_family_bold <- "Formula1-Display-Bold"
 font_color <- "#FFFFFF"
 background_color <- "#111111"
 p <- a %>% 
   ggplot2::ggplot()+
-  ggplot2::geom_point(ggplot2::aes(x=x, y=y, color=s, fill=Constructor.constructorId),
-                     size=2.5, stroke=0, shape=22)+
-  ggplot2::geom_point(data= . %>% dplyr::filter(s), ggplot2::aes(x=x, y=y),
-                      size=2, shape=4)+
+  ggplot2::geom_point(ggplot2::aes(x=x, y=y, color=s, fill=Constructor.constructorId), size=3, stroke=0, shape=22)+
+  ggplot2::geom_point(data= . %>% dplyr::filter(s), ggplot2::aes(x=x, y=y), size=2, shape=4)+
   ggplot2::scale_fill_manual(guide=F, values=constructorColor)+
   ggplot2::scale_color_manual(guide=F, values=c("#111111", "#f6f6f6"))+
   ggnewscale::new_scale_color()+
-  ggplot2::geom_text(data=teams_df,
-                     ggplot2::aes(x=teams_xmid, y=max(category_y)+3, 
+  ggplot2::geom_text(data=teams_df, 
+                     ggplot2::aes(x=teams_xmid-0.5, y=top+4, 
                                   label = stringr::str_wrap(teams_names, 8), color=teams_id), 
-                     size=3, hjust=0.5, vjust=0, angle=0,
-                     family=font_family_bold)+
-  ggplot2::geom_segment(data=teams_df, 
-                        ggplot2::aes(x = teams_xref-0.5, xend=teams_xref+x_max-0.5,
-                                     y=max(category_y)+2, yend=max(category_y)+2),
-                        color="white")+
+                     size=3.5, hjust=0.5, vjust=0, angle=0, family=font_family_bold)+
+  ggplot2::geom_segment(data=teams_df, #color="white",
+                        ggplot2::aes(x = teams_xref-0.5, xend=teams_xref+x_max-0.5, color=teams_id, y=top+2.5, yend=top+2.5))+
   ggplot2::scale_color_manual(guide=F, values=constructorColor)+
-  ggplot2::geom_text(data=categories, ggplot2::aes(x=-4, y=category_y - y_incr/2 +1.5, label=category_label),
-                     size=3, hjust=1, vjust=0.5,
-                     family=font_family, color=font_color, check_overlap = T)+
-  ggplot2::geom_segment(data=categories,
-                        ggplot2::aes(x = -2, xend=-2, y=category_y+0.5, yend=category_y - y_incr + 2.5), 
-                        color="white")+
-  # ggplot2::coord_fixed()+
-  ggplot2::coord_fixed(ratio=1, xlim=c(-15,170), ylim=c(-15, max(category_y)+10) )+
+  ggplot2::geom_text(data=categories, ggplot2::aes(x=-15, y=category_mid, label=category_label),
+                     size=3.5, hjust=0.5, vjust=0.5, family=font_family_bold, color=font_color, check_overlap = T)+
+  ggplot2::geom_segment(data=categories, color="white",
+                        ggplot2::aes(x = category_x, xend=category_x, y=category_y, yend=category_yend))+
+  # ggplot2::geom_text(label="F1 Hybrid Era 2014-2019", x=-20, y=max(category_y)+10, hjust=0, size=7,
+                     # family=font_family_bold, color=font_color, check_overlap = T)+
+  ggplot2::coord_fixed(ratio=1, xlim=c(-15,170), ylim=c(-15, top+10) )+
   ggplot2::theme_void()+
   ggplot2::theme(
-    text = ggplot2::element_text(family=font_family, color=font_color),
     plot.background = ggplot2::element_rect(fill=background_color),
-    panel.background = ggplot2::element_rect(fill=background_color),
-  ) # + ggplot2::ggsave(filename="demo_block.png",device="png", dpi=100, width=20, height=10)
-png("test-annotate-cairo.png", width = 18, height = 8,units = "in",
-    bg = background_color, res=300, type="cairo-png")
-# jpeg(filename = "Rplot.jpeg", width = 18, height = 8,units = "in",
-#      quality = 75, bg = "white", res = 300, type = "cairo")
+    panel.background = ggplot2::element_rect(fill=background_color)
+  ) + ggplot2::ggsave(filename="demo_block.png",device="png", dpi=600, width=20, height=10)
+
+
+png("test-annotate-cairo.png", width = 18, height = 8,units = "in", bg = background_color, res=300, type="cairo")
 print(p)
 dev.off()
-
 
