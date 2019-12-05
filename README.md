@@ -10,7 +10,8 @@ Data from extracted using [Ergast API](http://ergast.com/mrd/).
 
 ### Example
 
-<img src="figures/plot_hybrid_era.png"/>
+<img src="figures/plot_hybrid_era_blocks_edited.png"/>
+<img src="figures/plot_hybrid_era_edited.png"/>
 <img src="figures/plot_positions.png"/>
 <img src="figures/plot_seconds_behind.png"/>
 
